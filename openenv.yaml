@@ -1,0 +1,70 @@
+name: sciclean-env
+version: "1.0.0"
+description: >
+  A reinforcement-learning-style environment where an AI agent receives
+  messy scientific CSV datasets (outliers, missing values, unit errors,
+  duplicates) and must issue structured cleaning actions. The grader
+  compares the agent's cleaned output against a deterministically-generated
+  ground-truth dataset, producing a 0.0–1.0 reward signal at every step.
+
+tasks:
+  - id: 1
+    name: Basic Data Hygiene
+    difficulty: easy
+    description: >
+      Dataset contains duplicate rows, missing values, and wrong data types.
+      Agent issues drop_duplicates, fill_null, and cast_column actions.
+    max_steps: 20
+
+  - id: 2
+    name: Outlier Detection & Unit Errors
+    difficulty: medium
+    description: >
+      Dataset has injected 10× outliers and unit inconsistencies (mm vs cm).
+      Agent must flag/drop outliers and rescale affected columns.
+    max_steps: 30
+
+  - id: 3
+    name: Cross-Experiment Consistency Validation
+    difficulty: hard
+    description: >
+      Two related trial datasets with column name mismatches, contradictions,
+      and junk rows. Agent must clean, align, merge, and flag contradictions.
+    max_steps: 40
+
+action_space:
+  type: discrete_structured
+  description: >
+    JSON object with an "action" string key plus optional parameters.
+    See README.md for the full action catalogue per task.
+
+observation_space:
+  type: structured
+  fields:
+    - task_id: integer
+    - step: integer
+    - max_steps: integer
+    - dataframe: "list[dict]  # current state of the working dataset"
+    - aux: "dict  # task-specific auxiliary info (e.g. dataset B for task 3)"
+
+endpoints:
+  reset:
+    method: POST
+    path: /reset
+    body: '{"task_id": 1, "seed": 42}'
+  step:
+    method: POST
+    path: /step
+    body: '{"action": {"action": "drop_duplicates"}}'
+  state:
+    method: GET
+    path: /state
+  health:
+    method: GET
+    path: /health
+
+runtime:
+  cpu: 2
+  memory_gb: 8
+  port: 8000
+  inference_timeout_minutes: 20
